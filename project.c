@@ -90,6 +90,52 @@ void list_books(Library *lib) {
     }
 }
 
+#include <stdio.h>
+#include <string.h>
+
+#define MAX 100
+
+struct Book {
+    int id;
+    char title[50];
+    char author[50];
+    int readCount;  
+// how many times book was read
+};
+
+struct Book lib[MAX];
+int count = 0;
+
+void addBook();
+void updateReadCount();
+void displayBooks();
+void showMostReadBooks();
+
+int main() {
+    int choice;
+
+    while (1) {
+        printf("\n===== MOST READ BOOK TRACKER =====\n");
+        printf("1. Add Book\n");
+        printf("2. Update Read Count\n");
+        printf("3. Display All Books\n");
+        printf("4. Show Top 3 Most Read Books\n");
+        printf("5. Exit\n");
+
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1: addBook(); break;
+            case 2: updateReadCount(); break;
+            case 3: displayBooks(); break;
+            case 4: showMostReadBooks(); break;
+            case 5: return 0;
+            default: printf("Invalid choice!\n");
+        }
+    }
+}
+
 // Search book by ID
 Book* find_book(Library *lib, int id) {
     for (size_t i = 0; i < lib->size; i++)
@@ -200,3 +246,4 @@ int main() {
 
     return 0;
 }
+
