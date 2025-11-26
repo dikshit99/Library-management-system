@@ -1,112 +1,202 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include "library.h"
 
-void clear_input() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF) {}
+#define TITLE_LEN 100
+#define AUTHOR_LEN 100
+
+typedef struct {
+    int id;
+    char title[TITLE_LEN];
+    char author[AUTHOR_LEN];
+    int copies;
+} Book;
+
+typedef struct {
+    Book *books;
+    size_t size;
+    size_t cap;
+} Library;
+
+// Initialize library
+void init_library(Library *lib) {
+    lib->cap = 10;
+    lib->size = 0;
+    lib->books = malloc(sizeof(Book) * lib->cap);
 }
 
-void pause() {
-    printf("Press Enter to continue...");
+// Save memory
+void free_library(Library *lib) {
+    free(lib->books);
+}
+
+// Ensure capacity grows
+void ensure_capacity(Library *lib) {
+    if (lib->size >= lib->cap) {
+        lib->cap *= 2;
+        lib->books = realloc(lib->books, sizeof(Book) * lib->cap);
+    }
+}
+
+// Generate next ID
+int generate_next_id(Library *lib) {
+    int max = 0;
+    for (size_t i = 0; i < lib->size; i++)
+        if (lib->books[i].id > max)
+            max = lib->books[i].id;
+    return max + 1;
+}
+
+// Add book
+void add_book(Library *lib) {
+    ensure_capacity(lib);
+    Book b;
+
+    b.id = generate_next_id(lib);
+
+    printf("Enter title: ");
+    fgets(b.title, TITLE_LEN, stdin);
+    b.title[strcspn(b.title, "\n")] = '\0';
+
+    printf("Enter author: ");
+    fgets(b.author, AUTHOR_LEN, stdin);
+    b.author[strcspn(b.author, "\n")] = '\0';
+
+    printf("Enter number of copies: ");
+    scanf("%d", &b.copies);
+    getchar(); // consume newline
+
+    lib->books[lib->size++] = b;
+
+    printf("Book added with ID %d\n", b.id);
+}
+
+// List books
+void list_books(Library *lib) {
+    if (lib->size == 0) {
+        printf("No books available.\n");
+        return;
+    }
+
+    printf("\nID   | Title                         | Author               | Copies\n");
+    printf("-----------------------------------------------------------------------\n");
+
+    for (size_t i = 0; i < lib->size; i++) {
+        printf("%-4d | %-30s | %-20s | %d\n",
+               lib->books[i].id,
+               lib->books[i].title,
+               lib->books[i].author,
+               lib->books[i].copies);
+    }
+}
+
+// Search book by ID
+Book* find_book(Library *lib, int id) {
+    for (size_t i = 0; i < lib->size; i++)
+        if (lib->books[i].id == id)
+            return &lib->books[i];
+    return NULL;
+}
+
+// Remove book
+void remove_book(Library *lib) {
+    int id;
+    printf("Enter ID to remove: ");
+    scanf("%d", &id);
     getchar();
+
+    int index = -1;
+    for (size_t i = 0; i < lib->size; i++) {
+        if (lib->books[i].id == id) {
+            index = i;
+            break;
+        }
+    }
+
+    if (index == -1) {
+        printf("Book not found.\n");
+        return;
+    }
+
+    for (size_t i = index; i < lib->size - 1; i++)
+        lib->books[i] = lib->books[i + 1];
+
+    lib->size--;
+    printf("Book removed.\n");
 }
 
-int read_int(const char *prompt) {
-    int val;
-    printf("%s", prompt);
-    while (scanf("%d", &val) != 1) {
-        printf("Invalid input. Try again: ");
-        clear_input();
+// Borrow book
+void borrow_book(Library *lib) {
+    int id;
+    printf("Enter ID to borrow: ");
+    scanf("%d", &id);
+    getchar();
+
+    Book *b = find_book(lib, id);
+    if (!b) {
+        printf("Book not found.\n");
+        return;
     }
-    clear_input();
-    return val;
+
+    if (b->copies < 1) {
+        printf("No copies available.\n");
+        return;
+    }
+
+    b->copies--;
+    printf("You borrowed '%s'.\n", b->title);
 }
 
-void read_string(const char *prompt, char *buf, int size) {
-    printf("%s", prompt);
-    if (fgets(buf, size, stdin)) {
-        size_t ln = strlen(buf) - 1;
-        if (buf[ln] == '\n') buf[ln] = '\0';
+// Return book
+void return_book(Library *lib) {
+    int id;
+    printf("Enter ID to return: ");
+    scanf("%d", &id);
+    getchar();
+
+    Book *b = find_book(lib, id);
+    if (!b) {
+        printf("Book not found.\n");
+        return;
     }
+
+    b->copies++;
+    printf("You returned '%s'.\n", b->title);
 }
 
 int main() {
-    Book *books = NULL;
-    int count = 0;
-    load_books(&books, &count);
+    Library lib;
+    init_library(&lib);
 
     int choice;
-    do {
-        system("clear||cls");
-        printf("=== Library Management ===\n");
-        printf("1. Add book\n");
-        printf("2. Remove book\n");
-        printf("3. List books\n");
-        printf("4. Search books\n");
-        printf("5. Issue book\n");
-        printf("6. Return book\n");
-        printf("7. Save and Exit\n");
+
+    while (1) {
+        printf("\n=== Library Management System ===\n");
+        printf("1. List books\n");
+        printf("2. Add book\n");
+        printf("3. Remove book\n");
+        printf("4. Borrow book\n");
+        printf("5. Return book\n");
+        printf("6. Exit\n");
         printf("Enter choice: ");
-        choice = read_int("");
 
-        if (choice == 1) {
-            Book b = {0};
-            b.id = next_book_id(books, count);
-            read_string("Title: ", b.title, TITLE_LEN);
-            read_string("Author: ", b.author, AUTHOR_LEN);
-            b.year = read_int("Year: ");
-            b.issued = false;
-            b.issued_to[0] = '\0';
-            if (add_book(&books, &count, b) > 0) printf("Book added with ID %d\n", b.id);
-            else printf("Failed to add book.\n");
-            pause();
-        } else if (choice == 2) {
-            int id = read_int("Book ID to remove: ");
-            if (remove_book(&books, &count, id)) printf("Removed book %d\n", id);
-            else printf("Book not found.\n");
-            pause();
-        } else if (choice == 3) {
-            list_books(books, count);
-            pause();
-        } else if (choice == 4) {
-            char q[120];
-            read_string("Search (title or author): ", q, sizeof(q));
-            int results[100];
-            int n = search_books(books, count, q, results, 100);
-            if (n == 0) printf("No matches found.\n");
-            else {
-                printf("Found %d result(s):\n", n);
-                for (int i = 0; i < n; ++i) {
-                    Book *b = find_book_by_id(books, count, results[i]);
-                    if (b) printf("%d: %s by %s (%d) - %s\n", b->id, b->title, b->author, b->year, b->issued?"Issued":"Available");
-                }
-            }
-            pause();
-        } else if (choice == 5) {
-            int id = read_int("Book ID to issue: ");
-            Book *b = find_book_by_id(books, count, id);
-            if (!b) { printf("Book not found.\n"); pause(); continue; }
-            if (b->issued) { printf("Book already issued to %s\n", b->issued_to); pause(); continue; }
-            char name[50];
-            read_string("Borrower name: ", name, sizeof(name));
-            if (issue_book(books, count, id, name)) printf("Book issued.\n"); else printf("Failed to issue.\n");
-            pause();
-        } else if (choice == 6) {
-            int id = read_int("Book ID to return: ");
-            if (return_book(books, count, id)) printf("Book returned.\n"); else printf("Failed to return (not found or not issued).\n");
-            pause();
-        } else if (choice == 7) {
-            save_books(books, count);
-            printf("Saved. Exiting...\n");
-        } else {
-            printf("Invalid choice.\n");
-            pause();
+        scanf("%d", &choice);
+        getchar(); // flush
+
+        switch (choice) {
+            case 1: list_books(&lib); break;
+            case 2: add_book(&lib); break;
+            case 3: remove_book(&lib); break;
+            case 4: borrow_book(&lib); break;
+            case 5: return_book(&lib); break;
+            case 6:
+                printf("Goodbye!\n");
+                free_library(&lib);
+                exit(0);
+            default:
+                printf("Invalid choice.\n");
         }
-    } while (choice != 7);
+    }
 
-    free(books);
     return 0;
 }
