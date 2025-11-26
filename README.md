@@ -97,4 +97,8 @@ This file is created automatically if missing.
 ## 🔖 License
 MIT License
 
-You are free to use, modify, and distribute this project.
+
+<img width="408" height="353" alt="image" src="https://github.com/user-attachments/assets/1724c976-f31a-4f12-98dd-7de7c70c0a06" />
+<img width="401" height="289" alt="image" src="https://github.com/user-attachments/assets/0fd002c7-bb64-45a9-8f81-32d5852d26d1" />
+
+
